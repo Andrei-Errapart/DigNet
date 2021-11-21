@@ -1,0 +1,288 @@
+package javax.microedition.rms;
+
+import java.io.*;
+
+import java.util.Vector;
+
+import emulator.Utils;
+import emulator.FormMain;
+
+/**
+ * RecordStoreException.
+ */
+public class RecordStoreException extends Exception
+{
+	// Public usage.
+	public RecordStoreException(String fileName, String msg)
+	{
+		super(msg);
+		FormMain.log("RecordStoreException", msg, fileName, "FAIL");
+	}
+
+	// For use by inherited classes.
+	public RecordStoreException(String msg)
+	{
+		super(msg);
+	}
+}
+
+/**
+ * InvalidRecordIDException.
+ */
+public class InvalidRecordIDException extends RecordStoreException
+{
+	public InvalidRecordIDException(String fileName, int recordID, String msg)
+	{
+		super(msg);
+		FormMain.log("InvalidRecordIDException", msg, fileName+", record id:" + recordID, "FAIL");
+	}
+}
+
+/**
+ * RecordStoreNotOpenException.
+ */
+public class RecordStoreNotOpenException extends RecordStoreException
+{
+	public RecordStoreNotOpenException(String fileName, String msg)
+	{
+		super(msg);
+		FormMain.log("RecordStoreNotOpenException", msg, fileName, "FAIL");
+	}
+}
+
+/** RecordStoreFullException
+ */
+public class RecordStoreFullException extends RecordStoreException
+{
+	public RecordStoreFullException(String fileName, String msg)
+	{
+		super(msg);
+		FormMain.log("RecordStoreFullException", msg, fileName, "FAIL");
+	}
+}
+
+/** RecordStoreNotFoundException
+ */
+public class RecordStoreNotFoundException extends RecordStoreException
+{
+	public RecordStoreNotFoundException(String fileName, String msg)
+	{
+		super(msg);
+		FormMain.log("RecordStoreNotFoundException", msg, fileName, "FAIL");
+	}
+}
+
+/**
+ * Summary description for RecordStore.
+ */
+public class RecordStore
+{
+	private String storeName_ = null;
+	private String fileName_ = null;
+	private Vector contents_ = null;
+
+	/** Parse line containing space separated hexadecimal bytes.
+	 */
+	private final static byte[] parseLine(String line)
+	{
+		String[] v = Utils.split(line, ' ');
+		int n = v.length;
+		byte[] r = new byte[n];
+		for (int i = 0; i < n; ++i)
+		{
+			r[i] = (byte)Integer.parseInt(v[i], 16);
+		}
+		return r;
+	}
+
+	private final static void storeContents(String storeName, String fileName, Vector contents) throws RecordStoreException
+	{
+		try {
+			FileWriter fw = new FileWriter(fileName);
+			BufferedWriter out = new BufferedWriter(fw);
+			int n = contents.size();
+			StringBuffer sb = new StringBuffer();
+			for (int i=0; i<n; ++i) {
+				sb.setLength(0);
+				byte[] line = (byte[])contents.get(i);
+				for (int byteIndex=0; byteIndex<line.length; ++byteIndex) {
+					byte b = line[byteIndex];
+					if (byteIndex>0) {
+						sb.append(' ');
+					}
+					ubyte ub = (ubyte)b;
+					sb.append(Integer.toHexString(ub));
+				}
+				sb.append("\r\n");
+				fw.write(sb.toString());
+			}
+			out.close();
+		} catch (IOException e)
+		{
+			throw new RecordStoreException(fileName, "Error storing contents of '"+storeName+"':"+e.toString());
+		}
+	}
+
+	private final void storeContents() throws RecordStoreException
+	{
+		storeContents(storeName_, fileName_, contents_);
+	}
+
+	private RecordStore(String storeName,
+							String fileName,
+							boolean createIfNotExists) throws RecordStoreException, RecordStoreNotFoundException
+	{
+		boolean created = false;
+		// 1. Read contents.
+		Vector contents = new Vector();
+		try
+		{
+			FileReader fr = new FileReader(fileName);
+			BufferedReader in = new BufferedReader(fr);
+			// Read all the lines...
+			for (; ; )
+			{
+				String line = in.readLine();
+				if (line == null)
+				{
+					break;
+				}
+				else if (line.length()>0) {
+					contents.addElement(parseLine(line));
+				}
+			}
+			in.close();
+		}
+		catch (java.io.IOException ex)
+		{
+			if (createIfNotExists)
+			{
+				storeContents(storeName, fileName, contents);
+				created = true;
+				FormMain.log("recordstore", "Created", fileName, "OK");
+			} else 
+			{
+				throw new RecordStoreNotFoundException(fileName, "Record store " + storeName + " not found.");
+			}
+		}
+
+		if (!created)
+		{
+			FormMain.log("recordstore", "Opened", fileName, "OK");
+		}
+		// 2. Initialize store.
+		storeName_ = storeName;
+		fileName_ = fileName;
+		contents_ = contents;
+	}
+
+	public final static RecordStore openRecordStore(String storeName, boolean createIfNotExists)
+		throws RecordStoreException, RecordStoreFullException, RecordStoreNotFoundException
+	{
+		return new RecordStore(storeName, storeName + ".txt", createIfNotExists);
+	}
+
+	public final static void deleteRecordStore(String name)
+		throws RecordStoreException, RecordStoreNotFoundException
+	{
+		String fileName = name + ".txt";
+		File f = null;
+		try
+		{
+			f = new File(fileName);
+		}
+		catch (Exception e)
+		{
+			throw new RecordStoreNotFoundException(fileName, "deleteRecordStore: Can't find record store '" + name + "'. Error:" + e.toString());
+		}
+		boolean ok = false;
+		try
+		{
+			ok = f.delete();
+		}
+		catch (SecurityException e)
+		{
+			throw new RecordStoreException(fileName, "deleteRecordStore: Can't delete record store '" + name + "'. Error:" + e.toString());
+		}
+		if (!ok)
+		{
+			throw new RecordStoreException(fileName, "deleteRecordStore: Can't delete record store '" + name + "'.");
+		}
+		if (ok)
+		{
+			FormMain.log("recordstore", "Deleted", fileName, "OK");
+		}
+	}
+
+	private final void checkIsOpen(String functionName)
+		throws RecordStoreNotOpenException
+	{
+		if (contents_ == null)
+		{
+			throw new RecordStoreNotOpenException(fileName_, functionName+": Record store " + storeName_ + " is not open yet!");
+		}
+	}
+
+	private final void checkRecordID(String functionName, int recordID)
+		throws InvalidRecordIDException
+	{
+		int n = contents_.size();
+		if (recordID < 1 || recordID > n)
+		{
+			throw new InvalidRecordIDException(fileName_, recordID, functionName + ": ID out of range 1..." + n + ".");
+		}
+	}
+
+	public final int getNumRecords()
+		throws RecordStoreNotOpenException
+	{
+		checkIsOpen("getNumRecords");
+		return contents_.size();
+	}
+
+	public byte[] getRecord(int recordID)
+		throws RecordStoreNotOpenException, InvalidRecordIDException, RecordStoreException
+	{
+		checkIsOpen("getRecord");
+		checkRecordID("getRecord", recordID);
+		return (byte[])contents_.get(recordID - 1);
+	}
+
+	public int addRecord(byte bytes[], int offset, int len)
+		throws RecordStoreNotOpenException, RecordStoreException, RecordStoreFullException
+	{
+		checkIsOpen("addRecord");
+		byte[] buffer = new byte[len];
+		for (int i = 0; i < len; ++i)
+		{
+			buffer[i] = bytes[offset + i];
+		}
+		contents_.add(buffer);
+		storeContents();
+		return 0;
+	}
+
+	public int setRecord(int recordID, byte bytes[], int offset, int len)
+		throws RecordStoreNotOpenException, InvalidRecordIDException, RecordStoreException, RecordStoreFullException
+	{
+		checkIsOpen("setRecord");
+		checkRecordID("setRecord", recordID);
+		byte[] buffer = new byte[len];
+		for (int i = 0; i < len; ++i)
+		{
+			buffer[i] = bytes[offset + i];
+		}
+		contents_.set(recordID - 1, buffer);
+		storeContents();
+		return 0;
+	}
+
+	public void closeRecordStore()
+		throws RecordStoreNotOpenException, RecordStoreException
+	{
+		checkIsOpen("closeRecordStore");
+		contents_.removeAllElements();
+		contents_ = null;
+		FormMain.log("recordstore", "Closed", fileName_, "OK");
+	}
+}

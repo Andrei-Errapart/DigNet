@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with dxf2svg -->
+<svg
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:cc="http://web.resource.org/cc/"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:svg="http://www.w3.org/2000/svg"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:sodipodi="http://inkscape.sourceforge.net/DTD/sodipodi-0.dtd"
+	xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+	>
+	<g
+		inkscape:label="0"
+		inkscape:groupmode="layer"
+		id="layer1">
+	<path d="M 229.5 -3301.37 L 229.5 -2736 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -5.04e-12 -621 L 247.5 -621 L 292.5 -1026 L 292.5 -2738.01 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M 229.5 -3301.37 L -5.004e-12 -3301.37 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M 292.5 -3319.37 L 247.5 -3724.37 L 45 -3724.37 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M 229.5 -1044 L -5.04e-12 -1044 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M 229.5 -2736 L 229.5 -1044 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M 292.5 -2738.01 L 292.5 -3319.37 L 247.5 -3724.37 L -5.013e-12 -3724.37 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -292.5 -2738.01 L -292.5 -3319.37 L -247.5 -3724.37 L -5.058e-12 -3724.37 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -229.5 -2736 L -229.5 -1044 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -229.5 -1044 L -5.04e-12 -1044 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -292.5 -3319.37 L -247.5 -3724.37 L -45 -3724.37 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -229.5 -3301.37 L -5.067e-12 -3301.37 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -5.04e-12 -621 L -247.5 -621 L -292.5 -1026 L -292.5 -2738.01 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -229.5 -3301.37 L -229.5 -2736 " fill="none" stroke="black" stroke-width="1"  />
+	<g transform="matrix(1,0,0,1,229.5,-2736)" >
+</g>
+	<g transform="matrix(1,0,0,1,292.5,-2738.01)" >
+</g>
+	<g transform="matrix(1,0,0,1,-5.004e-12,-3301.37)" >
+</g>
+	<g transform="matrix(1,0,0,1,45,-3724.37)" >
+</g>
+	<g transform="matrix(1,0,0,1,-5.04e-12,-1044)" >
+</g>
+	<g transform="matrix(1,0,0,1,229.5,-1044)" >
+</g>
+	<g transform="matrix(1,0,0,1,-5.013e-12,-3724.37)" >
+</g>
+	<g transform="matrix(1,0,0,1,-5.058e-12,-3724.37)" >
+</g>
+	<g transform="matrix(1,0,0,1,-229.5,-1044)" >
+</g>
+	<g transform="matrix(1,0,0,1,-5.04e-12,-1044)" >
+</g>
+	<g transform="matrix(1,0,0,1,-45,-3724.37)" >
+</g>
+	<g transform="matrix(1,0,0,1,-5.067e-12,-3301.37)" >
+</g>
+	<g transform="matrix(1,0,0,1,-292.5,-2738.01)" >
+</g>
+	<g transform="matrix(1,0,0,1,-229.5,-2736)" >
+</g>
+	</g>
+</svg>

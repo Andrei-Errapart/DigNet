@@ -1,0 +1,7 @@
+AuthUserFile /home/kalle/public_html/points/.htpasswd
+AuthName "Pointfile upload"
+AuthType Basic
+
+<Limit GET>
+require valid-user
+</Limit>

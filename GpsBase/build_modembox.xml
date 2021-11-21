@@ -1,0 +1,136 @@
+<?xml version="1.0"?>
+<!--
+vim: ts=4
+vim: shiftwidth=4
+-->
+
+<!--
+
+Usage: open command prompt in the directory where this build.xml is located and type command: ant [enter]
+
+Running this build.xml script with Ant requires that you have installed the following software:
+
+    - J2SE SDK, version 1.4 or greater (http://java.sun.com/j2se/1.4.2/)
+        - Note that the bin -directory of the SDK must be in your PATH variable in order to find the jar 
+          executable. Ant also requires that the JAVA_HOME variable points to the root directory of the
+          J2SE SDK, e.g. "c:\j2sdk1.4.2".
+
+    - J2ME WTK, version 1.0.3 or 1.0.4 (http://java.sun.com/products/j2mewtoolkit)
+        - Needed for the preverify binary file when compiling IMlets. The wtk.home property of this script 
+          must point to the installation directory of the WTK, e.g. "c:\WTK104".
+
+    - Nokia 12 IMP 1.0 Concept Simulator (http://www.forum.nokia.com/m2mforum/main/1,6566,1_70_60,00.html)
+        - Optional, needed in the run target to execute the IMlet in the simulator. The wtkrun -command 
+          that launches the IMlet in the simulator requires that the simulator is integrated to the WTK 
+          (simply install the simulator, or copy/move it to the devices directory of the WTK, e.g. 
+          "C:\WTK104\wtklib\devices\Nokia_12_IMP_1_0_Concept_Simulator_1_0").
+
+    - Apache Ant (http://ant.apache.org/)
+        - Needed to run ant scripts such as this build.xml. The ant executable must be located in the
+          system path variable.
+
+    - Antenna (http://antenna.sourceforge.net/)
+        - Needed for the Ant tasks used in this build script. The antenna-bin.jar must be located in the
+          classpath variable.
+
+    Also, if you want to obfuscate your IMlet, you need to have an obfuscator,
+    either ProGuard (http://proguard.sourceforge.net/), or RetroGuard (http://www.retrologic.com/).
+  
+-->
+
+<project name="ExampleIMlets" default="run" basedir=".">
+
+    <!-- Change this according to your system -->
+    <property name="wtk.home" value="c:\WTK104"/>
+
+    <!-- System class libraries of the Nokia 12 GSM module -->
+    <!-- <property name="classpath" value="..\..\SystemClassLibrary\classes.zip"/> -->
+    <property name="classpath" value="..\N12_Java\classes.zip"/>
+        
+    <!-- Define this IMlet suite. -->
+    <property name="suite.name" value="ModemBox"/>
+    <property name="MicroEdition-Profile_version" value="1.0"/>
+    <property name="MicroEdition-Configuration_version" value="1.0"/>    
+	
+    <!-- Directories of file locations. -->
+    <property name="src" value="src"/>
+    <property name="classes" value="classes"/>
+    <property name="deploy" value="bin_ModemBox"/>
+
+    <!-- Define the Antenna tasks. -->
+    <taskdef name="wtkjad" classname="de.pleumann.antenna.WtkJad"/>
+    <taskdef name="wtkbuild" classname="de.pleumann.antenna.WtkBuild"/>
+    <taskdef name="wtkpackage" classname="de.pleumann.antenna.WtkPackage"/>
+    <taskdef name="wtkmakeprc" classname="de.pleumann.antenna.WtkMakePrc"/>
+    <taskdef name="wtkrun" classname="de.pleumann.antenna.WtkRun"/>
+    <taskdef name="wtkpreverify" classname="de.pleumann.antenna.WtkPreverify"/>
+    <taskdef name="wtkobfuscate" classname="de.pleumann.antenna.WtkObfuscate"/>
+
+    <!-- Init target: Clean up directories. -->	
+    <target name="init">
+
+        <echo message="Cleaning up..."/>
+
+        <!-- Delete all output directories -->
+        <delete dir="${classes}"/>
+        <delete dir="${deploy}"/>
+
+        <!-- Create empty output directories -->
+        <mkdir dir="${classes}"/> 
+        <mkdir dir="${deploy}"/>     
+
+    </target>
+
+
+    <!-- Compile target: Compile and preverify. -->
+    <target name="compile" depends="init">
+
+        <wtkbuild srcdir="${src}"
+                  destdir="${classes}"
+                  classpath="${classpath}"
+                  preverify="true"/>
+    </target>
+
+
+    <!-- Package target: Package everything. To obfuscate everything, set 
+             the corresponding parameter to "true" (requires 
+             RetroGuard or ProGuard in WTK bin directory or
+             in CLASSPATH). -->
+    <target name="package" depends="compile">
+
+        <!-- Create a JAD file. -->        
+        <wtkjad jadfile="${deploy}\${suite.name}.jad"
+                jarfile="${deploy}\${suite.name}.jar"
+                name="${suite.name}"
+                vendor="Errapart Engineering OY"
+                version="3.0.0">
+
+           <!-- List IMlets -->
+           <midlet name="ModemBox" class="com.errapartengineering.DigNet.Main"/>
+        </wtkjad>
+
+        <!-- Create a JAR file and update the JAD file. -->
+        <wtkpackage jarfile="${deploy}\${suite.name}.jar"
+                    jadfile="${deploy}\${suite.name}.jad"
+                    classpath="${classpath}"
+                    obfuscate="false"
+                    preverify="true"
+                    profile="IMP-1.0">
+
+            <!-- Package our newly compiled classes. -->
+            <fileset dir="${classes}"/>
+	
+        </wtkpackage>
+    		    	     
+    </target>
+    
+    
+    <!-- Run target: Start the MIDlet suite -->
+    <target name="run" depends="package">    		
+    	        
+        <wtkrun jadfile="${deploy}\${suite.name}.jad" device="Nokia_12_IMP_1_0_Concept_Simulator_1_0" wait="true"/>          
+
+    </target>
+
+</project>
+

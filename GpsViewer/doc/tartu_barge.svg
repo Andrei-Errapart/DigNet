@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with dxf2svg -->
+<svg
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:cc="http://web.resource.org/cc/"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:svg="http://www.w3.org/2000/svg"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:sodipodi="http://inkscape.sourceforge.net/DTD/sodipodi-0.dtd"
+	xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+	>
+	<g
+		inkscape:label="0"
+		inkscape:groupmode="layer"
+		id="layer1">
+	<path d="M -477 -4428 L -477 -1044 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M 477 -4428 L 477 -1044 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M 540 -4446 L 540 -1026 L 495 -621 L -495 -621 L -540 -1026 L -540 -4446 L -495 -4851 L 495 -4851 L 540 -4446 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -477 -4428 L 477 -4428 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -540 -4446 L -495 -4851 L 495 -4851 L 540 -4446 " fill="none" stroke="black" stroke-width="1"  />
+	<path d="M -477 -1044 L 477 -1044 " fill="none" stroke="black" stroke-width="1"  />
+	<g transform="matrix(1,0,0,1,-477,-1044)" >
+</g>
+	<g transform="matrix(1,0,0,1,477,-1044)" >
+</g>
+	<g transform="matrix(1,0,0,1,540,-4446)" >
+</g>
+	<g transform="matrix(1,0,0,1,477,-4428)" >
+</g>
+	<g transform="matrix(1,0,0,1,540,-4446)" >
+</g>
+	<g transform="matrix(1,0,0,1,477,-1044)" >
+</g>
+	</g>
+</svg>

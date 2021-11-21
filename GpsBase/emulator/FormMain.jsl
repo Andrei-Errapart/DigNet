@@ -1,0 +1,1053 @@
+package emulator;
+
+import System.Collections.Generic.*;
+import System.ComponentModel.*;
+import System.Data.*;
+import System.Drawing.*;
+import System.Windows.Forms.*;
+
+import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+import java.io.*;
+
+import com.errapartengineering.DigNet.Main;
+import javax.microedition.io.Connector;
+import com.nokia.m2m.imp.iocontrol.IOControl;
+import com.nokia.m2m.imp.watchdog.WatchdogTimer;
+import com.nokia.m2m.orb.idl.terminal.ET;
+
+/**
+ * Summary description for FormMain.
+ */
+public class FormMain extends System.Windows.Forms.Form
+{
+	private static FormMain instance = null;
+	private GroupBox groupBox5;
+	private Label label6;
+	private Label labelWatchdogTimeToAlarm;
+	private Label label8;
+	private Label labelWatchdogAlarmTime;
+	private Label labelWatchdogPeriod;
+	private Label label7;
+	private Timer timerWatchdog;
+	private System.IO.Ports.SerialPort serialPortJava;
+	private RadioButton radioButtonAppendCRLF;
+	private RadioButton radioButtonAppendLF;
+	private RadioButton radioButtonAppendCR;
+	private RadioButton radioButtonAppendNone;
+	private GroupBox groupBox6;
+	private TextBox textBoxIMEI;
+    private Button buttonEventLogSave;
+    private Button buttonEventLogLogToFile;
+    private TextBox textBoxEventLogLogToFile;
+
+	/** @delegate */
+	private delegate void SetTextDelegate(String text);
+	private final static SimpleDateFormat logFormat = new SimpleDateFormat("HH:mm:ss");
+    private GroupBox groupBox7;
+    private TextBox textBoxAIN1;
+    private TextBox textBoxAIN3;
+    private TextBox textBoxAIN2;
+    private Label label10;
+    private Label label9;
+    private Label label3;
+    private FileWriter logFile = null;
+    public static void log(String type, String description, String target, String status)
+	{
+		if (instance != null)
+		{
+			String text = logFormat.format(new Date()) + ":" + type + ":" + description + ":" + target + ":" + status + "\r\n";
+            if (instance.logFile == null)
+            {
+                Utils.appendText(instance.textBoxEventLog, text);
+            }
+            else
+            {
+                try
+                {
+                    instance.logFile.write(text);
+                    instance.logFile.flush();
+                }
+                catch (IOException ex)
+                {
+                    // pass.
+                }
+            }
+		}
+	}
+
+	private MenuStrip menuStrip;
+	private ToolStripMenuItem fileToolStripMenuItem;
+	private ToolStripMenuItem exitToolStripMenuItem;
+	private ToolStripMenuItem helpToolStripMenuItem;
+	private ToolStripMenuItem aboutToolStripMenuItem;
+	private CheckBox checkBoxOut2;
+	private GroupBox groupBox1;
+	private CheckBox checkBoxOut9;
+	private CheckBox checkBoxOut8;
+	private CheckBox checkBoxOut7;
+	private CheckBox checkBoxOut6;
+	private CheckBox checkBoxOut5;
+	private CheckBox checkBoxOut4;
+	private CheckBox checkBoxOut3;
+	private Button buttonMidletStart;
+	private Button buttonMidletStop;
+	private GroupBox groupBox2;
+	private GroupBox groupBox3;
+	private TextBox textBoxMidletName;
+	private Label label1;
+	private TextBox textBoxSerialStatus;
+	private Button buttonSerialInject;
+	private TextBox textBoxSerialInject;
+	private TextBox textBoxEventLog;
+	private Button buttonEventLogClear;
+	private TextBox textBoxSerialRealPort;
+	private Label label2;
+	private Label label4;
+	private TextBox textBoxMidletStatus;
+	private Label label5;
+	private GroupBox groupBox4;
+	/**
+	 * Required designer variable.
+	 */
+	private System.ComponentModel.IContainer components;
+
+	private class MidletStarter implements Runnable
+	{
+		private Main midlet = null;
+		private Thread thread = null;
+		private final static int FUNCTION_NONE = 0;
+		private final static int FUNCTION_STOP = 1;
+		private final static int FUNCTION_START = 2;
+		private int runFunction = FUNCTION_NONE;
+
+		public MidletStarter()
+		{
+		}
+
+		public void run()
+		{
+			try
+			{
+				switch (runFunction)
+				{
+					case FUNCTION_START:
+						try
+						{
+							midlet = new Main();
+							midlet.startApp();
+							Utils.setText(textBoxMidletStatus, "Running");
+							log("MidletStarter", "Midlet started", "", "OK");
+						}
+						catch (javax.microedition.midlet.MIDletStateChangeException ex)
+						{
+							log("MidletStarter", "Midlet not started, error:" + ex, "Midlet", "FAIL");
+							MessageBox.Show(ex.ToString(), "Midlet start error");
+						}
+						break;
+					case FUNCTION_STOP:
+						try
+						{
+							midlet.destroyApp(true);
+							midlet = null;
+							Utils.setText(textBoxMidletStatus, "Stopped");
+						}
+						catch (javax.microedition.midlet.MIDletStateChangeException ex)
+						{
+							log("MidletStarter", "Midlet not stopped, error:" + ex, "Midlet", "FAIL");
+							Utils.setText(textBoxMidletStatus, "Error");
+							MessageBox.Show(ex.ToString(), "Midlet stop error");
+						}
+						break;
+				}
+			}
+			finally
+			{
+				thread = null;
+			}
+		}
+
+		private final void doFunction(int function_number)
+		{
+			runFunction = function_number;
+			thread = new Thread(this);
+			thread.start();
+		}
+
+		/** Stop midlet, if any.
+		 */
+		public final void stop()
+		{
+			if (midlet != null)
+			{
+				if (thread == null)
+				{
+					doFunction(FUNCTION_STOP);
+				}
+				else
+				{
+					MessageBox.Show("Midlet state change operation still in progress.", "Midlet stop error");
+				}
+			}
+		}
+
+		public final void start()
+		{
+			if (midlet != null)
+			{
+				MessageBox.Show("Midlet not stopped!", "Midlet start error");
+				return;
+			}
+
+			if (thread == null)
+			{
+				doFunction(FUNCTION_START);
+			}
+			else
+			{
+				MessageBox.Show("Midlet state change operation still in progress.", "Midlet stop error");
+			}
+		}
+	} // class MidletStarter
+
+	MidletStarter midletStarter = new MidletStarter();
+
+	public FormMain()
+	{
+		InitializeComponent();
+
+		// Emulator setup.
+		instance = this;
+
+		ET.textBoxIMEI = textBoxIMEI;
+
+		Connector.textBoxSerialRealPort = textBoxSerialRealPort;
+		Connector.textBoxSerialStatus = textBoxSerialStatus;
+		Connector.serialPort = serialPortJava;
+
+		IOControl.checkboxes = new CheckBox[] {
+			null,
+			null,
+			checkBoxOut2,
+			checkBoxOut3,
+			checkBoxOut4,
+			checkBoxOut5,
+			checkBoxOut6,
+			checkBoxOut7,
+			checkBoxOut8,
+			checkBoxOut9
+		};
+
+		WatchdogTimer.labelTimeout = labelWatchdogPeriod;
+		WatchdogTimer.labelAlarmTime = labelWatchdogAlarmTime;
+		WatchdogTimer.labelTimeToAlarm = labelWatchdogTimeToAlarm;
+		timerWatchdog.set_Enabled(true);
+	}
+
+	#region Windows Form Designer generated code
+	/**
+     * Clean up any resources being used.
+     */
+	protected void Dispose(boolean disposing)
+	{
+		if (disposing)
+		{
+			if (components != null)
+			{
+				components.Dispose();
+			}
+		}
+		super.Dispose(disposing);
+	}
+
+	/**
+	 * Required method for Designer support - do not modify
+	 * the contents of this method with the code editor.
+	 */
+	private void InitializeComponent()
+	{
+        this.components = new System.ComponentModel.Container();
+        this.menuStrip = new System.Windows.Forms.MenuStrip();
+        this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+        this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+        this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+        this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+        this.checkBoxOut2 = new System.Windows.Forms.CheckBox();
+        this.groupBox1 = new System.Windows.Forms.GroupBox();
+        this.checkBoxOut9 = new System.Windows.Forms.CheckBox();
+        this.checkBoxOut8 = new System.Windows.Forms.CheckBox();
+        this.checkBoxOut7 = new System.Windows.Forms.CheckBox();
+        this.checkBoxOut6 = new System.Windows.Forms.CheckBox();
+        this.checkBoxOut5 = new System.Windows.Forms.CheckBox();
+        this.checkBoxOut4 = new System.Windows.Forms.CheckBox();
+        this.checkBoxOut3 = new System.Windows.Forms.CheckBox();
+        this.buttonMidletStart = new System.Windows.Forms.Button();
+        this.buttonMidletStop = new System.Windows.Forms.Button();
+        this.groupBox2 = new System.Windows.Forms.GroupBox();
+        this.radioButtonAppendCRLF = new System.Windows.Forms.RadioButton();
+        this.radioButtonAppendLF = new System.Windows.Forms.RadioButton();
+        this.radioButtonAppendCR = new System.Windows.Forms.RadioButton();
+        this.radioButtonAppendNone = new System.Windows.Forms.RadioButton();
+        this.label4 = new System.Windows.Forms.Label();
+        this.textBoxSerialStatus = new System.Windows.Forms.TextBox();
+        this.buttonSerialInject = new System.Windows.Forms.Button();
+        this.textBoxSerialInject = new System.Windows.Forms.TextBox();
+        this.textBoxSerialRealPort = new System.Windows.Forms.TextBox();
+        this.label2 = new System.Windows.Forms.Label();
+        this.textBoxEventLog = new System.Windows.Forms.TextBox();
+        this.buttonEventLogClear = new System.Windows.Forms.Button();
+        this.groupBox3 = new System.Windows.Forms.GroupBox();
+        this.textBoxMidletStatus = new System.Windows.Forms.TextBox();
+        this.label5 = new System.Windows.Forms.Label();
+        this.textBoxMidletName = new System.Windows.Forms.TextBox();
+        this.label1 = new System.Windows.Forms.Label();
+        this.groupBox4 = new System.Windows.Forms.GroupBox();
+        this.textBoxEventLogLogToFile = new System.Windows.Forms.TextBox();
+        this.buttonEventLogLogToFile = new System.Windows.Forms.Button();
+        this.buttonEventLogSave = new System.Windows.Forms.Button();
+        this.groupBox5 = new System.Windows.Forms.GroupBox();
+        this.labelWatchdogPeriod = new System.Windows.Forms.Label();
+        this.label7 = new System.Windows.Forms.Label();
+        this.labelWatchdogTimeToAlarm = new System.Windows.Forms.Label();
+        this.label8 = new System.Windows.Forms.Label();
+        this.labelWatchdogAlarmTime = new System.Windows.Forms.Label();
+        this.label6 = new System.Windows.Forms.Label();
+        this.timerWatchdog = new System.Windows.Forms.Timer(this.components);
+        this.serialPortJava = new System.IO.Ports.SerialPort(this.components);
+        this.groupBox6 = new System.Windows.Forms.GroupBox();
+        this.textBoxIMEI = new System.Windows.Forms.TextBox();
+        this.groupBox7 = new System.Windows.Forms.GroupBox();
+        this.label10 = new System.Windows.Forms.Label();
+        this.label9 = new System.Windows.Forms.Label();
+        this.label3 = new System.Windows.Forms.Label();
+        this.textBoxAIN3 = new System.Windows.Forms.TextBox();
+        this.textBoxAIN2 = new System.Windows.Forms.TextBox();
+        this.textBoxAIN1 = new System.Windows.Forms.TextBox();
+        this.menuStrip.SuspendLayout();
+        this.groupBox1.SuspendLayout();
+        this.groupBox2.SuspendLayout();
+        this.groupBox3.SuspendLayout();
+        this.groupBox4.SuspendLayout();
+        this.groupBox5.SuspendLayout();
+        this.groupBox6.SuspendLayout();
+        this.groupBox7.SuspendLayout();
+        this.SuspendLayout();
+        // 
+        // menuStrip
+        // 
+        this.menuStrip.get_Items().AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.fileToolStripMenuItem,
+            this.helpToolStripMenuItem}
+        );
+        this.menuStrip.set_Location(new System.Drawing.Point(0, 0));
+        this.menuStrip.set_Name("menuStrip");
+        this.menuStrip.set_Size(new System.Drawing.Size(715, 24));
+        this.menuStrip.set_TabIndex(0);
+        this.menuStrip.set_Text("menuStrip1");
+        // 
+        // fileToolStripMenuItem
+        // 
+        this.fileToolStripMenuItem.get_DropDownItems().AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.exitToolStripMenuItem}
+        );
+        this.fileToolStripMenuItem.set_Name("fileToolStripMenuItem");
+        this.fileToolStripMenuItem.set_Size(new System.Drawing.Size(35, 20));
+        this.fileToolStripMenuItem.set_Text("&File");
+        // 
+        // exitToolStripMenuItem
+        // 
+        this.exitToolStripMenuItem.set_Name("exitToolStripMenuItem");
+        this.exitToolStripMenuItem.set_Size(new System.Drawing.Size(103, 22));
+        this.exitToolStripMenuItem.set_Text("&Exit");
+        this.exitToolStripMenuItem.add_Click(new System.EventHandler(this.exitToolStripMenuItem_Click));
+        // 
+        // helpToolStripMenuItem
+        // 
+        this.helpToolStripMenuItem.get_DropDownItems().AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.aboutToolStripMenuItem}
+        );
+        this.helpToolStripMenuItem.set_Name("helpToolStripMenuItem");
+        this.helpToolStripMenuItem.set_Size(new System.Drawing.Size(40, 20));
+        this.helpToolStripMenuItem.set_Text("&Help");
+        // 
+        // aboutToolStripMenuItem
+        // 
+        this.aboutToolStripMenuItem.set_Name("aboutToolStripMenuItem");
+        this.aboutToolStripMenuItem.set_Size(new System.Drawing.Size(114, 22));
+        this.aboutToolStripMenuItem.set_Text("&About");
+        // 
+        // checkBoxOut2
+        // 
+        this.checkBoxOut2.set_AutoSize(true);
+        this.checkBoxOut2.set_Location(new System.Drawing.Point(12, 19));
+        this.checkBoxOut2.set_Name("checkBoxOut2");
+        this.checkBoxOut2.set_Size(new System.Drawing.Size(32, 17));
+        this.checkBoxOut2.set_TabIndex(1);
+        this.checkBoxOut2.set_Text("2");
+        this.checkBoxOut2.set_UseVisualStyleBackColor(true);
+        // 
+        // groupBox1
+        // 
+        this.groupBox1.set_Anchor(((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right))));
+        this.groupBox1.get_Controls().Add(this.checkBoxOut9);
+        this.groupBox1.get_Controls().Add(this.checkBoxOut8);
+        this.groupBox1.get_Controls().Add(this.checkBoxOut7);
+        this.groupBox1.get_Controls().Add(this.checkBoxOut6);
+        this.groupBox1.get_Controls().Add(this.checkBoxOut5);
+        this.groupBox1.get_Controls().Add(this.checkBoxOut4);
+        this.groupBox1.get_Controls().Add(this.checkBoxOut3);
+        this.groupBox1.get_Controls().Add(this.checkBoxOut2);
+        this.groupBox1.set_Location(new System.Drawing.Point(545, 185));
+        this.groupBox1.set_Name("groupBox1");
+        this.groupBox1.set_Size(new System.Drawing.Size(81, 209));
+        this.groupBox1.set_TabIndex(2);
+        this.groupBox1.set_TabStop(false);
+        this.groupBox1.set_Text("Digital Out");
+        // 
+        // checkBoxOut9
+        // 
+        this.checkBoxOut9.set_AutoSize(true);
+        this.checkBoxOut9.set_Location(new System.Drawing.Point(12, 180));
+        this.checkBoxOut9.set_Name("checkBoxOut9");
+        this.checkBoxOut9.set_Size(new System.Drawing.Size(32, 17));
+        this.checkBoxOut9.set_TabIndex(8);
+        this.checkBoxOut9.set_Text("9");
+        this.checkBoxOut9.set_UseVisualStyleBackColor(true);
+        // 
+        // checkBoxOut8
+        // 
+        this.checkBoxOut8.set_AutoSize(true);
+        this.checkBoxOut8.set_Location(new System.Drawing.Point(12, 157));
+        this.checkBoxOut8.set_Name("checkBoxOut8");
+        this.checkBoxOut8.set_Size(new System.Drawing.Size(32, 17));
+        this.checkBoxOut8.set_TabIndex(7);
+        this.checkBoxOut8.set_Text("8");
+        this.checkBoxOut8.set_UseVisualStyleBackColor(true);
+        // 
+        // checkBoxOut7
+        // 
+        this.checkBoxOut7.set_AutoSize(true);
+        this.checkBoxOut7.set_Location(new System.Drawing.Point(12, 134));
+        this.checkBoxOut7.set_Name("checkBoxOut7");
+        this.checkBoxOut7.set_Size(new System.Drawing.Size(32, 17));
+        this.checkBoxOut7.set_TabIndex(6);
+        this.checkBoxOut7.set_Text("7");
+        this.checkBoxOut7.set_UseVisualStyleBackColor(true);
+        // 
+        // checkBoxOut6
+        // 
+        this.checkBoxOut6.set_AutoSize(true);
+        this.checkBoxOut6.set_Location(new System.Drawing.Point(12, 111));
+        this.checkBoxOut6.set_Name("checkBoxOut6");
+        this.checkBoxOut6.set_Size(new System.Drawing.Size(32, 17));
+        this.checkBoxOut6.set_TabIndex(5);
+        this.checkBoxOut6.set_Text("6");
+        this.checkBoxOut6.set_UseVisualStyleBackColor(true);
+        // 
+        // checkBoxOut5
+        // 
+        this.checkBoxOut5.set_AutoSize(true);
+        this.checkBoxOut5.set_Location(new System.Drawing.Point(12, 88));
+        this.checkBoxOut5.set_Name("checkBoxOut5");
+        this.checkBoxOut5.set_Size(new System.Drawing.Size(32, 17));
+        this.checkBoxOut5.set_TabIndex(4);
+        this.checkBoxOut5.set_Text("5");
+        this.checkBoxOut5.set_UseVisualStyleBackColor(true);
+        // 
+        // checkBoxOut4
+        // 
+        this.checkBoxOut4.set_AutoSize(true);
+        this.checkBoxOut4.set_Location(new System.Drawing.Point(12, 65));
+        this.checkBoxOut4.set_Name("checkBoxOut4");
+        this.checkBoxOut4.set_Size(new System.Drawing.Size(32, 17));
+        this.checkBoxOut4.set_TabIndex(3);
+        this.checkBoxOut4.set_Text("4");
+        this.checkBoxOut4.set_UseVisualStyleBackColor(true);
+        // 
+        // checkBoxOut3
+        // 
+        this.checkBoxOut3.set_AutoSize(true);
+        this.checkBoxOut3.set_Location(new System.Drawing.Point(12, 42));
+        this.checkBoxOut3.set_Name("checkBoxOut3");
+        this.checkBoxOut3.set_Size(new System.Drawing.Size(32, 17));
+        this.checkBoxOut3.set_TabIndex(2);
+        this.checkBoxOut3.set_Text("3");
+        this.checkBoxOut3.set_UseVisualStyleBackColor(true);
+        // 
+        // buttonMidletStart
+        // 
+        this.buttonMidletStart.set_Location(new System.Drawing.Point(12, 84));
+        this.buttonMidletStart.set_Name("buttonMidletStart");
+        this.buttonMidletStart.set_Size(new System.Drawing.Size(75, 23));
+        this.buttonMidletStart.set_TabIndex(3);
+        this.buttonMidletStart.set_Text("Start");
+        this.buttonMidletStart.set_UseVisualStyleBackColor(true);
+        this.buttonMidletStart.add_Click(new System.EventHandler(this.buttonMidletStart_Click));
+        // 
+        // buttonMidletStop
+        // 
+        this.buttonMidletStop.set_Location(new System.Drawing.Point(103, 84));
+        this.buttonMidletStop.set_Name("buttonMidletStop");
+        this.buttonMidletStop.set_Size(new System.Drawing.Size(75, 23));
+        this.buttonMidletStop.set_TabIndex(4);
+        this.buttonMidletStop.set_Text("Stop");
+        this.buttonMidletStop.set_UseVisualStyleBackColor(true);
+        this.buttonMidletStop.add_Click(new System.EventHandler(this.buttonMidletStop_Click));
+        // 
+        // groupBox2
+        // 
+        this.groupBox2.get_Controls().Add(this.radioButtonAppendCRLF);
+        this.groupBox2.get_Controls().Add(this.radioButtonAppendLF);
+        this.groupBox2.get_Controls().Add(this.radioButtonAppendCR);
+        this.groupBox2.get_Controls().Add(this.radioButtonAppendNone);
+        this.groupBox2.get_Controls().Add(this.label4);
+        this.groupBox2.get_Controls().Add(this.textBoxSerialStatus);
+        this.groupBox2.get_Controls().Add(this.buttonSerialInject);
+        this.groupBox2.get_Controls().Add(this.textBoxSerialInject);
+        this.groupBox2.get_Controls().Add(this.textBoxSerialRealPort);
+        this.groupBox2.get_Controls().Add(this.label2);
+        this.groupBox2.set_Location(new System.Drawing.Point(195, 27));
+        this.groupBox2.set_Name("groupBox2");
+        this.groupBox2.set_Size(new System.Drawing.Size(344, 118));
+        this.groupBox2.set_TabIndex(5);
+        this.groupBox2.set_TabStop(false);
+        this.groupBox2.set_Text("Java Serial Port");
+        // 
+        // radioButtonAppendCRLF
+        // 
+        this.radioButtonAppendCRLF.set_AutoSize(true);
+        this.radioButtonAppendCRLF.set_Location(new System.Drawing.Point(259, 81));
+        this.radioButtonAppendCRLF.set_Name("radioButtonAppendCRLF");
+        this.radioButtonAppendCRLF.set_Size(new System.Drawing.Size(52, 17));
+        this.radioButtonAppendCRLF.set_TabIndex(12);
+        this.radioButtonAppendCRLF.set_Text("CRLF");
+        this.radioButtonAppendCRLF.set_UseVisualStyleBackColor(true);
+        // 
+        // radioButtonAppendLF
+        // 
+        this.radioButtonAppendLF.set_AutoSize(true);
+        this.radioButtonAppendLF.set_Location(new System.Drawing.Point(211, 81));
+        this.radioButtonAppendLF.set_Name("radioButtonAppendLF");
+        this.radioButtonAppendLF.set_Size(new System.Drawing.Size(37, 17));
+        this.radioButtonAppendLF.set_TabIndex(11);
+        this.radioButtonAppendLF.set_Text("LF");
+        this.radioButtonAppendLF.set_UseVisualStyleBackColor(true);
+        // 
+        // radioButtonAppendCR
+        // 
+        this.radioButtonAppendCR.set_AutoSize(true);
+        this.radioButtonAppendCR.set_Location(new System.Drawing.Point(165, 81));
+        this.radioButtonAppendCR.set_Name("radioButtonAppendCR");
+        this.radioButtonAppendCR.set_Size(new System.Drawing.Size(40, 17));
+        this.radioButtonAppendCR.set_TabIndex(10);
+        this.radioButtonAppendCR.set_Text("CR");
+        this.radioButtonAppendCR.set_UseVisualStyleBackColor(true);
+        // 
+        // radioButtonAppendNone
+        // 
+        this.radioButtonAppendNone.set_AutoSize(true);
+        this.radioButtonAppendNone.set_Checked(true);
+        this.radioButtonAppendNone.set_Location(new System.Drawing.Point(90, 81));
+        this.radioButtonAppendNone.set_Name("radioButtonAppendNone");
+        this.radioButtonAppendNone.set_Size(new System.Drawing.Size(69, 17));
+        this.radioButtonAppendNone.set_TabIndex(9);
+        this.radioButtonAppendNone.set_TabStop(true);
+        this.radioButtonAppendNone.set_Text("No CRLF");
+        this.radioButtonAppendNone.set_UseVisualStyleBackColor(true);
+        // 
+        // label4
+        // 
+        this.label4.set_AutoSize(true);
+        this.label4.set_Location(new System.Drawing.Point(171, 29));
+        this.label4.set_Name("label4");
+        this.label4.set_Size(new System.Drawing.Size(40, 13));
+        this.label4.set_TabIndex(8);
+        this.label4.set_Text("Status:");
+        // 
+        // textBoxSerialStatus
+        // 
+        this.textBoxSerialStatus.set_Location(new System.Drawing.Point(217, 26));
+        this.textBoxSerialStatus.set_Name("textBoxSerialStatus");
+        this.textBoxSerialStatus.set_Size(new System.Drawing.Size(116, 20));
+        this.textBoxSerialStatus.set_TabIndex(7);
+        // 
+        // buttonSerialInject
+        // 
+        this.buttonSerialInject.set_Location(new System.Drawing.Point(9, 78));
+        this.buttonSerialInject.set_Name("buttonSerialInject");
+        this.buttonSerialInject.set_Size(new System.Drawing.Size(75, 23));
+        this.buttonSerialInject.set_TabIndex(6);
+        this.buttonSerialInject.set_Text("Inject");
+        this.buttonSerialInject.set_UseVisualStyleBackColor(true);
+        this.buttonSerialInject.add_Click(new System.EventHandler(this.buttonSerialInject_Click));
+        // 
+        // textBoxSerialInject
+        // 
+        this.textBoxSerialInject.set_Location(new System.Drawing.Point(9, 52));
+        this.textBoxSerialInject.set_Name("textBoxSerialInject");
+        this.textBoxSerialInject.set_Size(new System.Drawing.Size(327, 20));
+        this.textBoxSerialInject.set_TabIndex(5);
+        // 
+        // textBoxSerialRealPort
+        // 
+        this.textBoxSerialRealPort.set_Location(new System.Drawing.Point(65, 26));
+        this.textBoxSerialRealPort.set_Name("textBoxSerialRealPort");
+        this.textBoxSerialRealPort.set_Size(new System.Drawing.Size(100, 20));
+        this.textBoxSerialRealPort.set_TabIndex(1);
+        this.textBoxSerialRealPort.set_Text("COM9");
+        // 
+        // label2
+        // 
+        this.label2.set_AutoSize(true);
+        this.label2.set_Location(new System.Drawing.Point(6, 29));
+        this.label2.set_Name("label2");
+        this.label2.set_Size(new System.Drawing.Size(53, 13));
+        this.label2.set_TabIndex(0);
+        this.label2.set_Text("Real port:");
+        // 
+        // textBoxEventLog
+        // 
+        this.textBoxEventLog.set_Anchor(((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+                    | System.Windows.Forms.AnchorStyles.Left)
+                    | System.Windows.Forms.AnchorStyles.Right))));
+        this.textBoxEventLog.set_Location(new System.Drawing.Point(6, 48));
+        this.textBoxEventLog.set_Multiline(true);
+        this.textBoxEventLog.set_Name("textBoxEventLog");
+        this.textBoxEventLog.set_ScrollBars(System.Windows.Forms.ScrollBars.Vertical);
+        this.textBoxEventLog.set_Size(new System.Drawing.Size(527, 272));
+        this.textBoxEventLog.set_TabIndex(4);
+        // 
+        // buttonEventLogClear
+        // 
+        this.buttonEventLogClear.set_Location(new System.Drawing.Point(12, 19));
+        this.buttonEventLogClear.set_Name("buttonEventLogClear");
+        this.buttonEventLogClear.set_Size(new System.Drawing.Size(75, 23));
+        this.buttonEventLogClear.set_TabIndex(3);
+        this.buttonEventLogClear.set_Text("Clear");
+        this.buttonEventLogClear.set_UseVisualStyleBackColor(true);
+        this.buttonEventLogClear.add_Click(new System.EventHandler(this.buttonSerialClear_Click));
+        // 
+        // groupBox3
+        // 
+        this.groupBox3.get_Controls().Add(this.textBoxMidletStatus);
+        this.groupBox3.get_Controls().Add(this.label5);
+        this.groupBox3.get_Controls().Add(this.textBoxMidletName);
+        this.groupBox3.get_Controls().Add(this.label1);
+        this.groupBox3.get_Controls().Add(this.buttonMidletStart);
+        this.groupBox3.get_Controls().Add(this.buttonMidletStop);
+        this.groupBox3.set_Location(new System.Drawing.Point(0, 27));
+        this.groupBox3.set_Name("groupBox3");
+        this.groupBox3.set_Size(new System.Drawing.Size(189, 118));
+        this.groupBox3.set_TabIndex(6);
+        this.groupBox3.set_TabStop(false);
+        this.groupBox3.set_Text("Midlet");
+        // 
+        // textBoxMidletStatus
+        // 
+        this.textBoxMidletStatus.set_Location(new System.Drawing.Point(58, 58));
+        this.textBoxMidletStatus.set_Name("textBoxMidletStatus");
+        this.textBoxMidletStatus.set_Size(new System.Drawing.Size(120, 20));
+        this.textBoxMidletStatus.set_TabIndex(8);
+        // 
+        // label5
+        // 
+        this.label5.set_AutoSize(true);
+        this.label5.set_Location(new System.Drawing.Point(12, 61));
+        this.label5.set_Name("label5");
+        this.label5.set_Size(new System.Drawing.Size(40, 13));
+        this.label5.set_TabIndex(7);
+        this.label5.set_Text("Status:");
+        // 
+        // textBoxMidletName
+        // 
+        this.textBoxMidletName.set_Location(new System.Drawing.Point(58, 26));
+        this.textBoxMidletName.set_Name("textBoxMidletName");
+        this.textBoxMidletName.set_Size(new System.Drawing.Size(120, 20));
+        this.textBoxMidletName.set_TabIndex(6);
+        this.textBoxMidletName.set_Text("GpsController");
+        // 
+        // label1
+        // 
+        this.label1.set_AutoSize(true);
+        this.label1.set_Location(new System.Drawing.Point(12, 29));
+        this.label1.set_Name("label1");
+        this.label1.set_Size(new System.Drawing.Size(38, 13));
+        this.label1.set_TabIndex(5);
+        this.label1.set_Text("Name:");
+        // 
+        // groupBox4
+        // 
+        this.groupBox4.set_Anchor(((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+                    | System.Windows.Forms.AnchorStyles.Left)
+                    | System.Windows.Forms.AnchorStyles.Right))));
+        this.groupBox4.get_Controls().Add(this.textBoxEventLogLogToFile);
+        this.groupBox4.get_Controls().Add(this.buttonEventLogLogToFile);
+        this.groupBox4.get_Controls().Add(this.buttonEventLogSave);
+        this.groupBox4.get_Controls().Add(this.buttonEventLogClear);
+        this.groupBox4.get_Controls().Add(this.textBoxEventLog);
+        this.groupBox4.set_Location(new System.Drawing.Point(0, 151));
+        this.groupBox4.set_Name("groupBox4");
+        this.groupBox4.set_Size(new System.Drawing.Size(539, 326));
+        this.groupBox4.set_TabIndex(7);
+        this.groupBox4.set_TabStop(false);
+        this.groupBox4.set_Text("Event log");
+        // 
+        // textBoxEventLogLogToFile
+        // 
+        this.textBoxEventLogLogToFile.set_Location(new System.Drawing.Point(276, 21));
+        this.textBoxEventLogLogToFile.set_Name("textBoxEventLogLogToFile");
+        this.textBoxEventLogLogToFile.set_Size(new System.Drawing.Size(252, 20));
+        this.textBoxEventLogLogToFile.set_TabIndex(7);
+        // 
+        // buttonEventLogLogToFile
+        // 
+        this.buttonEventLogLogToFile.set_Location(new System.Drawing.Point(195, 19));
+        this.buttonEventLogLogToFile.set_Name("buttonEventLogLogToFile");
+        this.buttonEventLogLogToFile.set_Size(new System.Drawing.Size(75, 23));
+        this.buttonEventLogLogToFile.set_TabIndex(6);
+        this.buttonEventLogLogToFile.set_Text("Log To File");
+        this.buttonEventLogLogToFile.set_UseVisualStyleBackColor(true);
+        this.buttonEventLogLogToFile.add_Click(new System.EventHandler(this.buttonEventLogLogToFile_Click));
+        // 
+        // buttonEventLogSave
+        // 
+        this.buttonEventLogSave.set_Location(new System.Drawing.Point(103, 19));
+        this.buttonEventLogSave.set_Name("buttonEventLogSave");
+        this.buttonEventLogSave.set_Size(new System.Drawing.Size(75, 23));
+        this.buttonEventLogSave.set_TabIndex(5);
+        this.buttonEventLogSave.set_Text("Save");
+        this.buttonEventLogSave.set_UseVisualStyleBackColor(true);
+        this.buttonEventLogSave.add_Click(new System.EventHandler(this.buttonLogSave_Click));
+        // 
+        // groupBox5
+        // 
+        this.groupBox5.set_Anchor(((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right))));
+        this.groupBox5.get_Controls().Add(this.labelWatchdogPeriod);
+        this.groupBox5.get_Controls().Add(this.label7);
+        this.groupBox5.get_Controls().Add(this.labelWatchdogTimeToAlarm);
+        this.groupBox5.get_Controls().Add(this.label8);
+        this.groupBox5.get_Controls().Add(this.labelWatchdogAlarmTime);
+        this.groupBox5.get_Controls().Add(this.label6);
+        this.groupBox5.set_Location(new System.Drawing.Point(545, 93));
+        this.groupBox5.set_Name("groupBox5");
+        this.groupBox5.set_Size(new System.Drawing.Size(162, 86));
+        this.groupBox5.set_TabIndex(8);
+        this.groupBox5.set_TabStop(false);
+        this.groupBox5.set_Text("Watchdog");
+        // 
+        // labelWatchdogPeriod
+        // 
+        this.labelWatchdogPeriod.set_AutoSize(true);
+        this.labelWatchdogPeriod.set_Location(new System.Drawing.Point(86, 16));
+        this.labelWatchdogPeriod.set_Name("labelWatchdogPeriod");
+        this.labelWatchdogPeriod.set_Size(new System.Drawing.Size(48, 13));
+        this.labelWatchdogPeriod.set_TabIndex(7);
+        this.labelWatchdogPeriod.set_Text("Disabled");
+        // 
+        // label7
+        // 
+        this.label7.set_AutoSize(true);
+        this.label7.set_Location(new System.Drawing.Point(6, 16));
+        this.label7.set_Name("label7");
+        this.label7.set_Size(new System.Drawing.Size(48, 13));
+        this.label7.set_TabIndex(6);
+        this.label7.set_Text("Timeout:");
+        // 
+        // labelWatchdogTimeToAlarm
+        // 
+        this.labelWatchdogTimeToAlarm.set_AutoSize(true);
+        this.labelWatchdogTimeToAlarm.set_Location(new System.Drawing.Point(86, 61));
+        this.labelWatchdogTimeToAlarm.set_Name("labelWatchdogTimeToAlarm");
+        this.labelWatchdogTimeToAlarm.set_Size(new System.Drawing.Size(0, 13));
+        this.labelWatchdogTimeToAlarm.set_TabIndex(5);
+        // 
+        // label8
+        // 
+        this.label8.set_AutoSize(true);
+        this.label8.set_Location(new System.Drawing.Point(6, 61));
+        this.label8.set_Name("label8");
+        this.label8.set_Size(new System.Drawing.Size(73, 13));
+        this.label8.set_TabIndex(4);
+        this.label8.set_Text("Time to alarm:");
+        // 
+        // labelWatchdogAlarmTime
+        // 
+        this.labelWatchdogAlarmTime.set_AutoSize(true);
+        this.labelWatchdogAlarmTime.set_Location(new System.Drawing.Point(86, 38));
+        this.labelWatchdogAlarmTime.set_Name("labelWatchdogAlarmTime");
+        this.labelWatchdogAlarmTime.set_Size(new System.Drawing.Size(0, 13));
+        this.labelWatchdogAlarmTime.set_TabIndex(3);
+        // 
+        // label6
+        // 
+        this.label6.set_AutoSize(true);
+        this.label6.set_Location(new System.Drawing.Point(6, 38));
+        this.label6.set_Name("label6");
+        this.label6.set_Size(new System.Drawing.Size(58, 13));
+        this.label6.set_TabIndex(1);
+        this.label6.set_Text("Alarm time:");
+        // 
+        // timerWatchdog
+        // 
+        this.timerWatchdog.add_Tick(new System.EventHandler(this.timerWatchdog_Tick));
+        // 
+        // serialPortJava
+        // 
+        this.serialPortJava.add_DataReceived(new System.IO.Ports.SerialDataReceivedEventHandler(this.serialPortJava_DataReceived));
+        // 
+        // groupBox6
+        // 
+        this.groupBox6.set_Anchor(((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right))));
+        this.groupBox6.get_Controls().Add(this.textBoxIMEI);
+        this.groupBox6.set_Location(new System.Drawing.Point(545, 27));
+        this.groupBox6.set_Name("groupBox6");
+        this.groupBox6.set_Size(new System.Drawing.Size(162, 60));
+        this.groupBox6.set_TabIndex(9);
+        this.groupBox6.set_TabStop(false);
+        this.groupBox6.set_Text("IMEI");
+        // 
+        // textBoxIMEI
+        // 
+        this.textBoxIMEI.set_Location(new System.Drawing.Point(12, 26));
+        this.textBoxIMEI.set_Name("textBoxIMEI");
+        this.textBoxIMEI.set_Size(new System.Drawing.Size(144, 20));
+        this.textBoxIMEI.set_TabIndex(0);
+        this.textBoxIMEI.set_Text("351117206931740");
+        // 
+        // groupBox7
+        // 
+        this.groupBox7.set_Anchor(((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right))));
+        this.groupBox7.get_Controls().Add(this.label10);
+        this.groupBox7.get_Controls().Add(this.label9);
+        this.groupBox7.get_Controls().Add(this.label3);
+        this.groupBox7.get_Controls().Add(this.textBoxAIN3);
+        this.groupBox7.get_Controls().Add(this.textBoxAIN2);
+        this.groupBox7.get_Controls().Add(this.textBoxAIN1);
+        this.groupBox7.set_Location(new System.Drawing.Point(545, 400));
+        this.groupBox7.set_Name("groupBox7");
+        this.groupBox7.set_Size(new System.Drawing.Size(144, 77));
+        this.groupBox7.set_TabIndex(10);
+        this.groupBox7.set_TabStop(false);
+        this.groupBox7.set_Text("Analog input (0 .. 10 V)");
+        // 
+        // label10
+        // 
+        this.label10.set_AutoSize(true);
+        this.label10.set_Location(new System.Drawing.Point(97, 42));
+        this.label10.set_Name("label10");
+        this.label10.set_Size(new System.Drawing.Size(31, 13));
+        this.label10.set_TabIndex(5);
+        this.label10.set_Text("AIN3");
+        // 
+        // label9
+        // 
+        this.label9.set_AutoSize(true);
+        this.label9.set_Location(new System.Drawing.Point(51, 42));
+        this.label9.set_Name("label9");
+        this.label9.set_Size(new System.Drawing.Size(31, 13));
+        this.label9.set_TabIndex(4);
+        this.label9.set_Text("AIN2");
+        // 
+        // label3
+        // 
+        this.label3.set_AutoSize(true);
+        this.label3.set_Location(new System.Drawing.Point(9, 42));
+        this.label3.set_Name("label3");
+        this.label3.set_Size(new System.Drawing.Size(31, 13));
+        this.label3.set_TabIndex(3);
+        this.label3.set_Text("AIN1");
+        // 
+        // textBoxAIN3
+        // 
+        this.textBoxAIN3.set_Location(new System.Drawing.Point(94, 19));
+        this.textBoxAIN3.set_Name("textBoxAIN3");
+        this.textBoxAIN3.set_Size(new System.Drawing.Size(38, 20));
+        this.textBoxAIN3.set_TabIndex(2);
+        this.textBoxAIN3.set_Text("5");
+        // 
+        // textBoxAIN2
+        // 
+        this.textBoxAIN2.set_Location(new System.Drawing.Point(50, 19));
+        this.textBoxAIN2.set_Name("textBoxAIN2");
+        this.textBoxAIN2.set_Size(new System.Drawing.Size(38, 20));
+        this.textBoxAIN2.set_TabIndex(1);
+        this.textBoxAIN2.set_Text("0");
+        // 
+        // textBoxAIN1
+        // 
+        this.textBoxAIN1.set_Location(new System.Drawing.Point(6, 19));
+        this.textBoxAIN1.set_Name("textBoxAIN1");
+        this.textBoxAIN1.set_Size(new System.Drawing.Size(38, 20));
+        this.textBoxAIN1.set_TabIndex(0);
+        this.textBoxAIN1.set_Text("6");
+        // 
+        // FormMain
+        // 
+        this.set_AutoScaleDimensions(new System.Drawing.SizeF(6F, 13F));
+        this.set_AutoScaleMode(System.Windows.Forms.AutoScaleMode.Font);
+        this.set_ClientSize(new System.Drawing.Size(715, 489));
+        this.get_Controls().Add(this.groupBox7);
+        this.get_Controls().Add(this.groupBox6);
+        this.get_Controls().Add(this.groupBox5);
+        this.get_Controls().Add(this.groupBox4);
+        this.get_Controls().Add(this.groupBox3);
+        this.get_Controls().Add(this.groupBox2);
+        this.get_Controls().Add(this.groupBox1);
+        this.get_Controls().Add(this.menuStrip);
+        this.set_MainMenuStrip(this.menuStrip);
+        this.set_Name("FormMain");
+        this.set_Text("Aplicom 12 emulator");
+        this.menuStrip.ResumeLayout(false);
+        this.menuStrip.PerformLayout();
+        this.groupBox1.ResumeLayout(false);
+        this.groupBox1.PerformLayout();
+        this.groupBox2.ResumeLayout(false);
+        this.groupBox2.PerformLayout();
+        this.groupBox3.ResumeLayout(false);
+        this.groupBox3.PerformLayout();
+        this.groupBox4.ResumeLayout(false);
+        this.groupBox4.PerformLayout();
+        this.groupBox5.ResumeLayout(false);
+        this.groupBox5.PerformLayout();
+        this.groupBox6.ResumeLayout(false);
+        this.groupBox6.PerformLayout();
+        this.groupBox7.ResumeLayout(false);
+        this.groupBox7.PerformLayout();
+        this.ResumeLayout(false);
+        this.PerformLayout();
+
+	}
+	#endregion
+
+	private void exitToolStripMenuItem_Click(Object sender, System.EventArgs e)
+	{
+		Application.Exit();
+	}
+
+	private void buttonMidletStart_Click(Object sender, System.EventArgs e)
+	{
+		midletStarter.start();
+	}
+
+	private void buttonMidletStop_Click(Object sender, System.EventArgs e)
+	{
+		midletStarter.stop();
+	}
+
+	private void buttonSerialClear_Click(Object sender, System.EventArgs e)
+	{
+		textBoxEventLog.set_Text("");
+	}
+
+	private void buttonSerialInject_Click(Object sender, System.EventArgs e)
+	{
+		String crlf = "";
+		if (radioButtonAppendCR.get_Checked())
+		{
+			crlf = "\r";
+		}
+		if (radioButtonAppendCRLF.get_Checked())
+		{
+			crlf = "\r\n";
+		}
+		if (radioButtonAppendLF.get_Checked())
+		{
+			crlf = "\n";
+		}
+		Connector.serialInject(textBoxSerialInject.get_Text() + crlf);
+	}
+
+    private TextBox textBoxAnalogInputs[] = null;
+
+	private void timerWatchdog_Tick(Object sender, System.EventArgs e)
+	{
+		WatchdogTimer.timer();
+
+        if (textBoxAnalogInputs == null)
+        {
+            textBoxAnalogInputs = new TextBox[3];
+            textBoxAnalogInputs[0] = textBoxAIN1;
+            textBoxAnalogInputs[1] = textBoxAIN2;
+            textBoxAnalogInputs[2] = textBoxAIN3;
+        }
+
+        for (int i = 0; i < 3; ++i)
+        {
+            try
+            {
+                String s = textBoxAnalogInputs[i].get_Text();
+                double v = Double.parseDouble(s);
+                IOControl.AnalogInputs[i] = (int)(1023.0 / 10.0 * v);
+            }
+            catch (Exception ex)
+            {
+                // pass.
+            }
+        }
+	}
+
+    private void serialPortJava_DataReceived(Object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
+	{
+		int n = serialPortJava.get_BytesToRead();
+        if (n > 0)
+        {
+            ubyte[] buffer = new ubyte[n];
+            serialPortJava.Read(buffer, 0, n);
+			Connector.serialReadInject(buffer);
+        }
+	}
+
+    private SaveFileDialog file_save_dlg_ = null;
+    private DialogResult showFileSaveDialog()
+    {
+        if (file_save_dlg_ == null)
+        {
+            file_save_dlg_ = new SaveFileDialog();
+            file_save_dlg_.set_Filter("Text files (*.txt)|*.txt|All files (*.*)|*.*");
+            file_save_dlg_.set_RestoreDirectory(true);
+        }
+        return file_save_dlg_.ShowDialog();
+    }
+    private void buttonLogSave_Click(Object sender, System.EventArgs e)
+    {
+        if (showFileSaveDialog() == DialogResult.OK)
+        {
+            try
+            {
+                FileWriter fw = new FileWriter(file_save_dlg_.get_FileName());
+                fw.write(textBoxEventLog.get_Text());
+                fw.close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.toString(), "Error");
+            }
+        }
+    }
+
+    private void buttonEventLogLogToFile_Click(Object sender, System.EventArgs e)
+    {
+        if (logFile == null)
+        {
+            if (showFileSaveDialog() == DialogResult.OK)
+            {
+                String filename = file_save_dlg_.get_FileName();
+                try
+                {
+                    logFile = new FileWriter(filename);
+                    textBoxEventLogLogToFile.set_Text(filename);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.toString(), "Error");
+                }
+            }
+        }
+        else
+        {
+            MessageBox.Show("Log to file already active!", "Error");
+        }
+    }
+}

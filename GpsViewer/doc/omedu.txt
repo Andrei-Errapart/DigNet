@@ -1,0 +1,8 @@
+vööripoolne gps võrreldes Tartuga
+meeter v66ri
+meeter vasakusse poordi
+
+--
+Aku tegelik pinge: 25.5
+Aku mõõdetud pinge: 24.9
+

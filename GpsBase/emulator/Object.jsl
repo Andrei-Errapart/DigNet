@@ -1,0 +1,14 @@
+package org.omg.CORBA;
+
+/**
+ * Summary description for Object.
+ */
+public class Object
+{
+	public Object()
+	{
+		//
+		// TODO: Add Constructor Logic here
+		//
+	}
+}

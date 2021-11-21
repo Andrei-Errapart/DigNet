@@ -1,0 +1,17 @@
+m2msystem:N1=255,N3=10,T3=10,BaudRate=4,
+supplementaryservice:AutoAnswer=1,CallWaiting=0,CallingLineIdentificationRestriction=0,
+sms:RemoveOldestMessage=1,ServiceCentreAddress=+3725099000,MessageDeliveryReports=0,MessageReplyPath=0,MessageValidityPeriod=5,
+wapcommon:CSDNNumberAuthentication=0,IncomingCHAPAuthentication=1,IncomingCHAPUsername=LampMonitor,IncomingCHAPPassword=SuperDuperAbba,DefaultConnectionIndex=0,GprsAlwaysOnline=1,HLAPort=0,HLAName=,UseM2MGateway=1,
+wapconnection0:WTPPortNumber=0,WAPBearer=1,DestinationAddress=,GatewayIPAddress=0.0.0.0,WAPGWPortNumber=1,CHAPUserName=LampMonitor,CHAPPassword=SuperDuperAbba,GatewayAddress=internet.emt.ee,DataCallBitrate=0,ConnectionTimeout=0,
+wapconnection1:WTPPortNumber=65535,WAPBearer=5,GatewayAddress=,DestinationAddress=,GatewayIPAddress=0.0.0.0,WAPGWPortNumber=65535,CHAPUserName=,CHAPPassword=,DataCallBitrate=0,ConnectionTimeout=0,
+wapconnection2:WTPPortNumber=65535,WAPBearer=5,GatewayAddress=,DestinationAddress=,GatewayIPAddress=0.0.0.0,WAPGWPortNumber=65535,CHAPUserName=,CHAPPassword=,DataCallBitrate=0,ConnectionTimeout=0,
+wapconnection3:WTPPortNumber=65535,WAPBearer=5,GatewayAddress=,DestinationAddress=,GatewayIPAddress=0.0.0.0,WAPGWPortNumber=65535,CHAPUserName=,CHAPPassword=,DataCallBitrate=0,ConnectionTimeout=0,
+wapconnection4:WTPPortNumber=0,WAPBearer=0,GatewayAddress=,DestinationAddress=,GatewayIPAddress=10.0.0.1,WAPGWPortNumber=1,CHAPUserName=LampMonitor,CHAPPassword=SuperDuperAbba,DataCallBitrate=0,ConnectionTimeout=0,
+serverioinput:InputMode1=0,AnalogInputMode1=0,InputPeriod1=10,InputHighLimit1=2800,InputLowLimit1=0,InputMode2=0,AnalogInputMode2=0,InputPeriod2=10,InputHighLimit2=2800,InputLowLimit2=0,InputMode3=0,AnalogInputMode3=0,InputPeriod3=10,InputHighLimit3=2800,InputLowLimit3=0,AlarmMode=1,
+serveriooutput:Output1=1,Output2=0,Output3=0,Output4=0,Output5=0,Output6=1,Output7=0,Output8=0,Output9=0,
+serverioport:Port1=2,Port3=1,BaudRate=2,GLL=1,GGA=1,RMC=1,VTG=0,
+serveriohttp:Data=-1,LoginType=1,Username=,Password=,DialupNumber=,ProxyName=,DataCallType=0,DataCallSpeed=0,SessionSecurity=0,AccessPointName=,
+audio:AudioMode=0,EchoMode=0,
+userio:Identifier=~MasterNumber=~Password=[[da28]]~Aliases=~DisableAck=0~
+operatingmode:
+imletdownloading:IPAddress=10.0.0.1,

@@ -1,0 +1,409 @@
+package javax.microedition.io;
+
+import System.Windows.Forms.*;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+
+import System.IO.Ports.SerialPort;
+
+import emulator.Utils;
+import emulator.FormMain;
+import emulator.FixedByteQueue;
+
+/**
+ * Summary description for Connector.
+ */
+public class Connector
+{
+	// --- EMULATOR INTERFACE ---
+	public static TextBox textBoxSerialRealPort = null;
+	public static TextBox textBoxSerialStatus = null;
+	public static SerialPort serialPort = null;
+
+	public final static void raiseIOException(String type, String functionName, String path, String errorText)
+		throws IOException
+	{
+		FormMain.log(type, functionName + ":" + errorText, path, "FAIL");
+		throw new IOException(errorText);
+	}
+
+	private static class SerialConnection implements StreamConnection
+	{
+		private String portName = "";
+		FixedByteQueue readQueue = null;
+
+		private void doClose()
+		{
+			readQueue = null;
+			Connector.serialConnection = null;
+			if (serialPort.get_IsOpen())
+			{
+				serialPort.Close();
+			}
+			FormMain.log("serial", "Closed", portName, "OK");
+			Utils.setText(textBoxSerialStatus, "Closed");
+		}
+
+		private class SerialInputStream extends InputStream
+		{
+			public int read() throws IOException
+			{
+				FixedByteQueue rq = readQueue;
+				// Check for closure.
+				if (rq == null)
+				{
+					FormMain.log("serial", "read: already closed!", portName, "FAIL");
+					throw new IOException("SerialInputStream: already closed!");
+				}
+				// Wait for a byte to be available.
+				while (rq.isEmpty())
+				{
+					Utils.sleep(100);
+					// Check EOF
+					if (readQueue == null)
+					{
+						FormMain.log("serial", "EOF", portName, "");
+						return -1;
+					}
+				}
+				// Finally :P
+				ubyte r = (ubyte)rq.popFront();
+				// Report
+				FormMain.log("serial", "read char:" + Utils.stringOfBuffer(new ubyte[] { r }), portName, "OK");
+				// Rest for a while.
+				return r;
+			}
+
+			public int read(byte[] buffer) throws IOException
+			{
+				return read(buffer, 0, buffer.length);
+			}
+
+			public int read(byte[] buffer, int offset, int length) throws IOException
+			{
+				if (length == 0)
+				{
+					return 0;
+				}
+				FixedByteQueue rq = readQueue;
+				if (rq == null)
+				{
+					FormMain.log("serial", "read: already closed!", portName, "FAIL");
+					throw new IOException("SerialInputStream: already closed!");
+				}
+
+				int r = 0;
+				for (int i = 0; i < length && !rq.isEmpty(); ++i)
+				{
+					ubyte b = rq.popFront();
+					buffer[offset + i] = (byte)b;
+					r = r + 1;
+				}
+				FormMain.log("serial", "read: " + Utils.stringOfBuffer(buffer, offset, r), portName, "OK");
+				return r;
+			}
+
+			public int available() throws IOException
+			{
+                try
+                {
+                    java.lang.Thread.sleep(10);
+                }
+                catch (Exception e)
+                {
+                    // pass.
+                }
+				return readQueue.length();
+			}
+
+			public void close()
+			{
+			}
+		}
+
+		private class SerialOutputStream extends OutputStream
+		{
+			public void write(int data) throws IOException
+			{
+				byte[] bdata = new byte[] { (byte)data };
+				write(bdata, 0, bdata.length);
+			}
+
+			public void write(byte[] data) throws IOException
+			{
+				write(data, 0, data.length);
+			}
+
+			public void write(byte[] data, int offset, int length) throws IOException
+			{
+				// ubyte[] bytes = System.Text.Encoding.get_ASCII().GetBytes(s);
+				ubyte bytes[] = new ubyte[length];
+				for (int i = 0; i < length; ++i)
+				{
+					bytes[i] = (ubyte)(data[offset + i]);
+				}
+				String s = Utils.stringOfBuffer(bytes, 0, bytes.length);
+
+				if (serialPort.get_IsOpen())
+				{
+					serialPort.Write(bytes, 0, bytes.length);
+				}
+				FormMain.log("serial", "write:" + s, portName, "OK");
+			}
+
+			public void close()
+			{
+			}
+		}
+
+		public SerialConnection(String thePortName)
+		{
+			portName = thePortName;
+			readQueue = new FixedByteQueue(256 * 256);
+		}
+
+		public InputStream openInputStream() throws IOException
+		{
+			SerialInputStream r = new SerialInputStream();
+			return r;
+		}
+
+		public OutputStream openOutputStream() throws IOException
+		{
+			SerialOutputStream r = new SerialOutputStream();
+			return r;
+		}
+
+		public void close() throws IOException
+		{
+			doClose();
+		}
+
+		public void inject(String s)
+		{
+			FixedByteQueue rq = readQueue;
+			if (rq != null)
+			{
+				ubyte[] bytes = System.Text.Encoding.get_ASCII().GetBytes(s);
+				FormMain.log("serial", "Inject:" + s, portName, "OK");
+				for (int i = 0; i < bytes.length; ++i)
+				{
+					rq.pushBack(bytes[i]);
+				}
+			}
+		}
+
+		public void inject(ubyte[] buffer)
+		{
+			FixedByteQueue rq = readQueue;
+			if (rq != null)
+			{
+				FormMain.log("serial", "physical read:" + Utils.stringOfBuffer(buffer), portName, "OK");
+				for (int i = 0; i < buffer.length; ++i)
+				{
+					rq.pushBack(buffer[i]);
+				}
+			}
+		}
+	}
+
+	private static SerialConnection serialConnection = null;
+ 
+	public static void serialInject(String s)
+	{
+		if (serialConnection!=null)
+		{
+			serialConnection.inject(s);
+		}
+	}
+
+	/** Inject bytes to the currently open serial port for the midlet to read.
+	 */
+	public static void serialReadInject(ubyte[] buffer)
+	{
+		if (serialConnection != null)
+		{
+			serialConnection.inject(buffer);
+		}
+	}
+
+	private static class SocketConnection implements StreamConnection
+	{
+		private Socket socket_ = null;
+		private String path_ = null;
+
+		public SocketConnection(String hostName, int port)
+			throws IOException
+		{
+			path_ = hostName + ":" + port;
+			try
+			{
+				socket_ = new Socket(hostName, port);
+			}
+			catch (UnknownHostException e)
+			{
+                raiseIOException("socket", "connect", path_, e.toString()); 
+			}
+			catch (IOException e)
+			{
+                raiseIOException("socket", "connect", path_, e.toString());
+            }
+			FormMain.log("socket", "Connected.", path_, "OK");
+		}
+
+		public InputStream openInputStream() throws IOException
+		{
+			if (socket_ == null)
+			{
+				raiseIOException("socket", "openInputStream", path_, "already closed");
+			}
+			return socket_.getInputStream();
+		}
+
+		public OutputStream openOutputStream() throws IOException
+		{
+			if (socket_ == null)
+			{
+				raiseIOException("socket", "openInputStream", path_, "already closed");
+			}
+			return socket_.getOutputStream();
+		}
+
+		public void close() throws IOException
+		{
+			if (socket_ != null)
+			{
+				socket_.close();
+				socket_ = null;
+				FormMain.log("socket", "Disconnected.", path_, "OK");
+			}
+		}
+
+	}
+
+	// --- PUBLIC INTERFACE ---
+	public static int READ_WRITE = 1;
+
+	public final static StreamConnection open(String path, int mode)
+		throws IOException
+	{
+		int pos = path.indexOf(':');
+		if (pos < 0)
+		{
+			raiseIOException("connector", "open", path, "Invalid path");
+		}
+		String device = path.substring(0, pos);
+		String opts = path.substring(pos + 1, path.length());
+		if (device.equals("comm"))
+		{
+			String[] o = Utils.split(opts, ';');
+			int device_no = 3;
+			int baud_rate = 9600;
+
+			for (int i = 0; i < o.length; ++i)
+			{
+				String[] keyval = Utils.split(o[i], '=');
+				if (keyval.length == 1)
+				{
+					try
+					{
+						device_no = Integer.parseInt(keyval[0]);
+					}
+					catch (Exception ex)
+					{
+						raiseIOException("connector", "open", path, "Invalid serial port in path");
+					}
+				}
+				else
+				{
+					if (keyval[0].equals("baudrate"))
+					{
+						try
+						{
+							baud_rate = Integer.parseInt(keyval[1]);
+						}
+						catch (Exception ex)
+						{
+							raiseIOException("connector", "open", path, "Invalid baud rate in path");
+						}
+					}
+					else
+					{
+						raiseIOException("connector", "open", path, "Invalid serial port option in path");
+					}
+				}
+			}
+
+			if (device_no != 3)
+			{
+				raiseIOException("connector", "open", path, "Only serial port 3 supported");
+			}
+			if (serialConnection != null)
+			{
+				raiseIOException("connector", "open", path, "Port 3 already opened");
+			}
+
+			serialConnection = new SerialConnection("COM"+device_no);
+			String real_port = textBoxSerialRealPort.get_Text();
+			if (real_port.length() > 0)
+			{
+				try
+				{
+					serialPort.set_PortName(real_port);
+					serialPort.set_BaudRate(baud_rate);
+					serialPort.Open();
+					FormMain.log("serial", "Real port opened", real_port, "OK");
+				}
+				catch (System.Exception ex)
+				{
+					FormMain.log("serial", "Real port not found:" + ex.ToString(), real_port, "FAIL");
+				}
+			}
+			if (serialPort.get_IsOpen())
+			{
+				Utils.setText(textBoxSerialStatus, "Opened,"+real_port+","+baud_rate);
+			}
+			else
+			{
+				Utils.setText(textBoxSerialStatus, "Opened");
+			}
+			FormMain.log("serial", "Opened port " + device_no + " at baud rate " + baud_rate, "COM" + device_no, "OK");
+			return serialConnection;
+		}
+		else if (device.equals("socket") && opts.substring(0, 2).equals("//"))
+		{
+			String socketOpts = opts.substring(2);
+			String[] opts2 = Utils.split(socketOpts, ':');
+			if (opts2.length < 2)
+			{
+				raiseIOException("connector", "open", path, "Invalid socket path");
+			}
+
+			// Get the port.
+			int port = -1;
+			try
+			{
+				port = Integer.parseInt(opts2[1]);
+			}
+			catch (Exception ex)
+			{
+				raiseIOException("connector", "open", path, "Invalid port specifier in path.");
+			}
+
+			return new SocketConnection(opts2[0], port);
+		}
+		raiseIOException("connector", "open", path, "Invalid path");
+		return null;
+	}
+
+	public static StreamConnection open(String path) throws IOException
+	{
+		return open(path, READ_WRITE);
+	}
+}

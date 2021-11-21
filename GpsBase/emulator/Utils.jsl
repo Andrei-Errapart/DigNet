@@ -1,0 +1,167 @@
+package emulator;
+
+import java.util.Vector;
+
+import System.Windows.Forms.*;
+
+/**
+ * Summary description for Utils.
+ */
+public class Utils
+{
+	/** Split the string with given separator.
+	
+	There will always be at least one member in the returned array.
+	*/
+	public final static String[] split(String s, char sep)
+	{
+		// Temporary.
+		Vector r = new Vector();
+
+		// Do the splitting.
+		int so_far = 0;
+		int spos = -1;
+		do
+		{
+			spos = s.indexOf(sep, so_far);
+			if (spos >= 0)
+			{
+				r.addElement(s.substring(so_far, spos));
+				so_far = spos + 1;
+			}
+		} while (spos >= 0);
+		r.addElement(s.substring(so_far, s.length()));
+
+		// Convert
+		String[] sr = new String[r.size()];
+		for (int i = 0; i < sr.length; ++i)
+		{
+			sr[i] = (String)r.elementAt(i);
+		}
+		return sr;
+	}
+
+	/** @delegate */
+	private delegate void SetTextDelegate(String text);
+
+	public final static void setText(TextBox textbox, String text)
+	{
+		if (textbox != null)
+		{
+			if (textbox.get_InvokeRequired())
+			{
+				SetTextDelegate d = new SetTextDelegate(textbox, "set_Text");
+				textbox.Invoke(d, new Object[] { text });
+			}
+			else
+			{
+				textbox.set_Text(text);
+			}
+		}
+	}
+
+	public final static void setText(Label label, String text)
+	{
+		if (label != null)
+		{
+			if (label.get_InvokeRequired())
+			{
+				SetTextDelegate d = new SetTextDelegate(label, "set_Text");
+				label.Invoke(d, new Object[] { text });
+			}
+			else
+			{
+				label.set_Text(text);
+			}
+		}
+	}
+
+	public final static void appendText(TextBox textbox, String text)
+	{
+		if (textbox != null)
+		{
+			if (textbox.get_InvokeRequired())
+			{
+				SetTextDelegate d = new SetTextDelegate(textbox, "AppendText");
+				textbox.Invoke(d, new Object[] { text });
+			}
+			else
+			{
+				textbox.AppendText(text);
+			}
+		}
+	}
+
+	private static String ok_chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUWXYZ .,:;[]{}'\"!@#$%&()_+-\\|/><";
+	public final static String stringOfBuffer(ubyte[] buffer, int offset, int length)
+	{
+		char[] chars = System.Text.Encoding.get_ASCII().GetChars(buffer, offset, length);
+		StringBuffer sb = new StringBuffer();
+		for (int i = 0; i < chars.length; ++i)
+		{
+			char c = chars[i];
+			switch (c)
+			{
+				case '\r':
+					sb.append("\\r");
+					break;
+				case '\n':
+					sb.append("\\n");
+					break;
+				case '\t':
+					sb.append("\\t");
+					break;
+				default:
+					if (ok_chars.indexOf(c) >= 0)
+					{
+						sb.append(c);
+					}
+					else
+					{
+						sb.append("\\" + Integer.toOctalString(buffer[i]));
+					}
+			}
+		}
+
+		String s = sb.toString();
+		return s;
+	}
+
+	public final static String stringOfBuffer(ubyte[] buffer)
+	{
+		return stringOfBuffer(buffer, 0, buffer.length);
+	}
+
+	public final static String stringOfBuffer(byte[] buffer, int offset, int length)
+	{
+		ubyte[] ubuffer = new ubyte[length];
+		for (int i = 0; i < length; ++i)
+		{
+			ubuffer[i] = (ubyte)buffer[offset + i];
+		}
+		return stringOfBuffer(ubuffer, 0, ubuffer.length);
+	}
+
+	public final static String stringOfBuffer(byte[] buffer)
+	{
+		ubyte[] ubuffer = new ubyte[buffer.length];
+		for (int i = 0; i < buffer.length; ++i)
+		{
+			ubuffer[i] = (ubyte)buffer[i];
+		}
+		return stringOfBuffer(ubuffer, 0, ubuffer.length);
+	}
+
+	public final static void sleep(int ms)
+	{
+		try
+		{
+			Thread.sleep(ms);
+		}
+		catch (java.lang.InterruptedException ex)
+		{
+			// pass
+		}
+	}
+
+}

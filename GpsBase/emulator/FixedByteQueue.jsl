@@ -1,0 +1,100 @@
+package emulator;
+
+import java.lang.RuntimeException;
+
+/** Fixed-size lock-free queue of ubytes. Front of the queue can be modified.
+ * 
+ * Throws exceptions on errors.
+ */
+public class FixedByteQueue
+{
+    private ubyte[] items_ = null;
+    private int pushIndex_ = 0;
+    private int popIndex_ = 0;
+
+    /// <summary>
+    /// Fixed queue of given maximum size.
+    /// </summary>
+    /// <param name="size">Maximum size of the queue.</param>
+    public FixedByteQueue(int size)
+    {
+        items_ = new ubyte[size];
+    }
+
+    /// <summary>
+    /// True iff the queue is empty.
+    /// </summary>
+    public boolean isEmpty()
+    {
+		return pushIndex_ == popIndex_;
+    }
+
+    /// <summary>
+    /// Push item at the back of the queue.
+    /// </summary>
+    /// <param name="t"></param>
+    public void pushBack(ubyte t)
+    {
+        int nextIndex = (pushIndex_ + 1) % items_.length;
+        if (nextIndex == popIndex_)
+        {
+			throw new RuntimeException("FixedByteQueue: tried to insert item into full queue.");
+        }
+        items_[pushIndex_] = t;
+        pushIndex_ = nextIndex;
+    }
+
+    /// <summary>
+    /// Pop item off the Front of the queue.
+    /// </summary>
+    /// <returns>Front element of the queue.</returns>
+    public ubyte popFront()
+    {
+        if (pushIndex_ == popIndex_)
+        {
+			throw new RuntimeException("FixedByteQueue: tried to pop item off from empty queue.");
+        }
+        ubyte r = items_[popIndex_];
+        popIndex_ = (popIndex_ + 1) % items_.length;
+        return r;
+    }
+
+    /// <summary>
+    /// Front item of the queue, read.
+    /// </summary>
+    public ubyte get_Front()
+    {
+            if (pushIndex_ == popIndex_)
+            {
+				throw new RuntimeException("FixedByteQueue: tried to access front item from empty queue.");
+            }
+            return items_[popIndex_];
+	}
+
+	/// <summary>
+	/// Front item of the queue, write.
+	/// </summary>
+	public void set_Front(ubyte value)
+    {
+        if (pushIndex_ == popIndex_)
+        {
+			throw new RuntimeException("FixedByteQueue: tried to update empty queue.");
+        }
+        items_[popIndex_] = value;
+    }
+
+	/// <summary>
+	/// Length of the queue (not reliable!).
+	/// </summary>
+	public int length()
+	{
+		int push_index = pushIndex_;
+		int pop_index = popIndex_;
+
+		if (push_index<pop_index)
+		{
+			push_index = push_index + items_.length;
+		}
+		return push_index - pop_index;
+	}
+}

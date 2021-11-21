@@ -1,0 +1,7 @@
+GpsViewer/Server ja build numbrid
+
+GpsViewerid saavad endale külge build numbri. Nad saadavad selle serverile programmi käivitumise hetkel ning lisaks 1x minutis. Selle numbri järgi saab server otsustada milliseid pakette on tarvis vieweritele saata.
+
+Kui server pole kliendilt saanud build numbrit teatud perioodi jooksul (3min?) siis eeldatakse, et viewerit ei tööta ning võib jätta saatmata ainult gpsviewerile mõeldud paketid. Samas see eeldaks, et kuidagi on võimalik kindlaks teha millisel kliendil töötab vana ilma build numbrita viewer. Nii kaua kui seda pole võimalik teha tuleb endiselt saata kõik vanemale versioonile mõeldud paketid ning saatmata saab jätta ainult buildnumbriga viewerile mõeldud paketid.
+
+Paketid tuleks ümber teha nii, et iga pakett sisaldaks enumina oma tüübi ID'd, minimaalset/maksimaalset versiooninumbrit ning vastuvõtja tüüpi (mis tüüpi klientidele pakette saadetakse, bitfield, or'itakse kokku vastavad klienditüüpide ID'd). Min/max versiooni järgi saaks automatiseerida pakettide saatmise kontrolli. Vastuvõtja tüübi järgi saab lihtsustada pakettide edasi saatmist kuna siis saab selle ära lahendada ühe ühtse funktsiooniga.

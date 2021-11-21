@@ -1,0 +1,14 @@
+package javax.microedition.midlet;
+
+/**
+ * Summary description for MIDlet.
+ */
+public class MIDlet
+{
+	public MIDlet()
+	{
+		//
+		// TODO: Add Constructor Logic here
+		//
+	}
+}

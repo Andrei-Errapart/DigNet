@@ -1,0 +1,19 @@
+package emulator;
+
+import emulator.FormMain;
+import System.Collections.Generic.*;
+import System.Windows.Forms.*;
+
+/**
+ * Summary description for Program
+ */
+public class Program
+{
+	/** @attribute System.STAThread() */
+	public static void main(String[] args)
+	{
+		Application.EnableVisualStyles();
+		Application.SetCompatibleTextRenderingDefault(false);
+		Application.Run(new FormMain());
+	}
+}

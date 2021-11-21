@@ -1,0 +1,20 @@
+package com.nokia.m2m.orb.idl.terminal;
+
+import System.Windows.Forms.*;
+
+/**
+ * Summary description for ET.
+ */
+public class ET
+{
+	public static TextBox textBoxIMEI = null;
+
+	public ET()
+	{
+	}
+
+	public String IMEI()
+	{
+		return textBoxIMEI == null ? "1234567890" : textBoxIMEI.get_Text();
+	}
+}

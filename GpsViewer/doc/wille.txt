@@ -1,0 +1,5 @@
+wille plaanid 
+gps1 x= -8.3 y=3.7
+gps2 x= -11.4 y=-2.78
+
+gepsud siis risti  üle telje

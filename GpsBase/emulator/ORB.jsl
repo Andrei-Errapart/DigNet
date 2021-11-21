@@ -1,0 +1,28 @@
+package org.omg.CORBA;
+
+/**
+ * Summary description for ORB.
+ */
+public class ORB
+{
+	private ORB()
+	{
+		//
+		// TODO: Add Constructor Logic here
+		//
+	}
+
+	public static ORB init(String arg1, String arg2)
+	{
+		return new ORB();
+	}
+
+	public Object string_to_object(String objref)
+	{
+		return null;
+	}
+
+	public void destroy()
+	{
+	}
+}

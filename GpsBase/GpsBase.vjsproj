@@ -1,0 +1,84 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{10DA224B-E3EC-4F17-9628-6F05E551CD24}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>GpsBase</RootNamespace>
+    <AssemblyName>GpsBase</AssemblyName>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="App.ico" />
+    <Compile Include="emulator\Connector.jsl" />
+    <Compile Include="emulator\ET.jsl" />
+    <Compile Include="emulator\ETHelper.jsl" />
+    <Compile Include="emulator\FixedByteQueue.jsl" />
+    <Compile Include="emulator\FormMain.jsl">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="emulator\IOControl.jsl" />
+    <Compile Include="emulator\MIDlet.jsl" />
+    <Compile Include="emulator\MIDletStateChangeException.jsl" />
+    <Compile Include="emulator\Object.jsl" />
+    <Compile Include="emulator\ORB.jsl" />
+    <Compile Include="emulator\Program.jsl" />
+    <Compile Include="emulator\RecordStore.jsl" />
+    <Compile Include="emulator\StreamConnection.jsl" />
+    <Compile Include="emulator\Utils.jsl" />
+    <Compile Include="emulator\WatchdogTimer.jsl" />
+    <Compile Include="Properties\AssemblyInfo.jsl" />
+    <Compile Include="src\Application.java" />
+    <Compile Include="src\ApplicationGpsBase.java" />
+    <Compile Include="src\ApplicationModemBox.java" />
+    <Compile Include="src\BuildInfo.java" />
+    <Compile Include="src\CMR.java" />
+    <Compile Include="src\CMRDecoder.java" />
+    <Compile Include="src\GeotracerDecoder.java" />
+    <Compile Include="src\GeotracerPacket.java" />
+    <Compile Include="src\IOPanel.java" />
+    <Compile Include="src\Main.java" />
+    <Compile Include="src\oMathFP.java" />
+    <Compile Include="src\StopException.java" />
+    <Compile Include="src\Utils.java" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="emulator\FormMain.resx">
+      <DependentUpon>FormMain.jsl</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.VisualJSharp.targets" />
+  <PropertyGroup>
+    <ApplicationIcon>App.ico</ApplicationIcon>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

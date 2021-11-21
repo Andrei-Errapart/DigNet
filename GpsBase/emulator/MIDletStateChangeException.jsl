@@ -1,0 +1,12 @@
+package javax.microedition.midlet;
+
+/**
+ * Summary description for MIDletStateChangeException.
+ */
+public class MIDletStateChangeException extends java.lang.Exception
+{
+	public MIDletStateChangeException(String msg)
+	{
+		super(msg);
+	}
+}

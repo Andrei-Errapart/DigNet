@@ -1,0 +1,19 @@
+package com.nokia.m2m.orb.idl.terminal;
+
+/**
+ * Summary description for ETHelper.
+ */
+public class ETHelper
+{
+	public ETHelper()
+	{
+		//
+		// TODO: Add Constructor Logic here
+		//
+	}
+
+	public static ET narrow(org.omg.CORBA.Object obj)
+	{
+		return new ET();
+	}
+}

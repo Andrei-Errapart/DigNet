@@ -1,0 +1,52 @@
+
+--
+Power switch:
+	IR6216 high side switch
+		gate voltage: 5V.
+
+Optronid:
+	G3VM-61A1, drive current: 10mA.
+	kogus:
+		2x lühiskaabel
+		1x TX
+		2x RX
+	kokku:	5
+
+Lühisekaabel:
+	2x optron
+	1x relee 37-220-14 (Relay 1-pole CO T7NS-5D1-12, R=400Ohm, I=30mA)
+
+Loogika (JA-EI kivid):
+	TX_CONNECTED = RESET && RTCM
+	RX_CONNECTED_PORT1 = RESET && RTCM
+	RX_CONNECTED_PORT2 = RESET && !RTCM
+
+470R takisteid 10tk
+
+7805
+
+Ühendused:
+	1. Toide
+		2 soont
+		(2x0.75mm2, 55-601-98, D=6.5mm)
+		-- (2x1.5mm2, 55-300-43, D=9.4mm)
+	2. Geotracer
+		com 1 = 4 soont
+		com 3 = 4 soont
+		power button + led = 4 soont
+
+		(kõik kaablid 4x0.5mm2, 510-011, D=6.6mm)
+		-- (4x0.25mm2, 510-422, D=5.2mm)
+	3. Teltonika
+		7 ühendust + GND = 8 soont (keerupaar, D=6mm)
+		com2/com3 = keerupaar,	D=6mm.
+	4. Ekstra
+		1 DB9 (teltonika programming)
+
+Jahutusradikas
+	2 tükki, TO220, 5cm kõrge.
+
+Korpus
+
+Makettplaat
+
